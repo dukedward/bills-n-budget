@@ -22,7 +22,7 @@ export default function Login() {
       <div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-sm space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-foreground">
-            <span className="text-primary">Budget</span>Flow
+            <span className="text-primary">Bills-n-</span>Budget
           </h1>
           <p className="text-muted-foreground">
             Sign in with Google to access your budget dashboard

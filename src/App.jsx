@@ -14,6 +14,7 @@ import AppLayout from "./components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Bills from "./pages/Bills";
 import Income from "./pages/Income";
+import Balances from "./pages/Balances";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
@@ -37,6 +38,7 @@ function App() {
               <Route path="/Dashboard" element={<Dashboard />} />
               <Route path="/Bills" element={<Bills />} />
               <Route path="/Income" element={<Income />} />
+              <Route path="/Balances" element={<Balances />} />
               <Route path="/Analytics" element={<Analytics />} />
               <Route path="/Settings" element={<Settings />} />
             </Route>

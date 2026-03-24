@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import {
+  CreditCard,
   LayoutDashboard,
   Receipt,
   Wallet,
@@ -15,6 +16,7 @@ const navItems = [
   { path: "/Dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/Bills", label: "Bills", icon: Receipt },
   { path: "/Income", label: "Income", icon: Wallet },
+  { path: "/Balances", label: "Balances", icon: CreditCard },
   { path: "/Analytics", label: "Analytics", icon: BarChart3 },
   { path: "/Settings", label: "Settings", icon: Settings },
 ];

@@ -129,7 +129,7 @@ export default function Bills() {
                 key={bill.id}
                 bill={bill}
                 onEdit={handleEdit}
-                onDelete={(b) => deleteMutation.mutate(b.id)}
+                onDelete={(b) => handleDelete(b.id)}
                 onTogglePaid={handleTogglePaid}
               />
             ))}

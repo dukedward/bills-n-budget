@@ -8,6 +8,8 @@ export function toMonthlyAmount(amount, frequency) {
       return amount;
     case "annually":
       return amount / 12;
+    case "one_time":
+      return 0;
     default:
       return amount;
   }
@@ -58,6 +60,7 @@ export const categoryColors = {
 };
 
 export const frequencyLabels = {
+  one_time: "One-Time Payment",
   weekly: "Weekly",
   biweekly: "Bi-weekly",
   monthly: "Monthly",

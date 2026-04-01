@@ -6,6 +6,8 @@ export function toMonthlyAmount(amount, frequency) {
       return (amount * 26) / 12;
     case "monthly":
       return amount;
+    case "quarterly":
+      return amount / 4;
     case "annually":
       return amount / 12;
     case "one_time":
@@ -64,6 +66,7 @@ export const frequencyLabels = {
   weekly: "Weekly",
   biweekly: "Bi-weekly",
   monthly: "Monthly",
+  quarterly: "Quarterly",
   annually: "Annually",
 };
 

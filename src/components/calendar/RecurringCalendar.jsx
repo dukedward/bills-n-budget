@@ -5,21 +5,43 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrencyExact } from "@/lib/budgetUtils";
 import {
   format,
-  addDays,
   addWeeks,
   addMonths,
   addYears,
-  isSameDay,
   startOfMonth,
   endOfMonth,
 } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 
+function parseLocalDate(dateString) {
+  if (!dateString) return null;
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function shiftDate(date, frequency, direction = 1) {
+  switch (frequency) {
+    case "weekly":
+      return addWeeks(date, 1 * direction);
+    case "biweekly":
+      return addWeeks(date, 2 * direction);
+    case "monthly":
+      return addMonths(date, 1 * direction);
+    case "quarterly":
+      return addMonths(date, 3 * direction);
+    case "annually":
+      return addYears(date, 1 * direction);
+    case "one_time":
+      return null;
+    default:
+      return null;
+  }
+}
+
 export default function RecurringCalendar({ bills, incomes }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMonth, setViewMonth] = useState(new Date());
 
-  // Generate recurring dates for the current month view
   const recurringDates = useMemo(() => {
     const dates = new Map();
     const monthStart = startOfMonth(viewMonth);
@@ -28,28 +50,31 @@ export default function RecurringCalendar({ bills, incomes }) {
     const addRecurringDates = (item, type) => {
       if (!item.due_date && !item.next_date) return;
 
-      const startDate = new Date(item.due_date || item.next_date);
-      let currentDate = new Date(startDate);
+      const startDate = parseLocalDate(item.due_date || item.next_date);
+      if (!startDate) return;
 
-      // Go back to find the first occurrence before the month
-      while (currentDate > monthStart) {
-        switch (item.frequency) {
-          case "weekly":
-            currentDate = addDays(currentDate, -7);
-            break;
-          case "biweekly":
-            currentDate = addDays(currentDate, -14);
-            break;
-          case "monthly":
-            currentDate = addMonths(currentDate, -1);
-            break;
-          case "annually":
-            currentDate = addYears(currentDate, -1);
-            break;
+      const frequency = item.frequency || "monthly";
+
+      // One-time items: only add if they fall within this month
+      if (frequency === "one_time") {
+        if (startDate >= monthStart && startDate <= monthEnd) {
+          const dateKey = format(startDate, "yyyy-MM-dd");
+          if (!dates.has(dateKey)) {
+            dates.set(dateKey, []);
+          }
+          dates.get(dateKey).push({ ...item, type, date: new Date(startDate) });
         }
+        return;
       }
 
-      // Generate dates within the month view
+      let currentDate = new Date(startDate);
+
+      while (currentDate > monthStart) {
+        const prevDate = shiftDate(currentDate, frequency, -1);
+        if (!prevDate) break;
+        currentDate = prevDate;
+      }
+
       while (currentDate <= monthEnd) {
         if (currentDate >= monthStart) {
           const dateKey = format(currentDate, "yyyy-MM-dd");
@@ -61,20 +86,9 @@ export default function RecurringCalendar({ bills, incomes }) {
             .push({ ...item, type, date: new Date(currentDate) });
         }
 
-        switch (item.frequency) {
-          case "weekly":
-            currentDate = addWeeks(currentDate, 1);
-            break;
-          case "biweekly":
-            currentDate = addWeeks(currentDate, 2);
-            break;
-          case "monthly":
-            currentDate = addMonths(currentDate, 1);
-            break;
-          case "annually":
-            currentDate = addYears(currentDate, 1);
-            break;
-        }
+        const nextDate = shiftDate(currentDate, frequency, 1);
+        if (!nextDate) break;
+        currentDate = nextDate;
       }
     };
 

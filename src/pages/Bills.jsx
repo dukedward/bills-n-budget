@@ -1,24 +1,20 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { queryClientInstance } from "@/lib/query-client";
 import { useAuth } from "@/lib/AuthContext";
 import { listBills, createBill, updateBill, deleteBill } from "@/api/bills";
-import { createPayment } from "@/api/payments";
 import BillCard from "@/components/bills/BillCard";
 import BillFormDialog from "@/components/bills/BillFormDialog";
-import PaymentHistoryModal from "@/components/bills/PaymentHistoryModal";
 import OverdueBillAlert from "@/components/dashboard/OverdueBillAlert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatePresence } from "framer-motion";
-import { getNextDueDate, getFrequenciesToReset } from "@/lib/billPaymentUtils";
 
 export default function Bills() {
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBill, setEditingBill] = useState(null);
-  const [historyBill, setHistoryBill] = useState(null);
 
   const {
     data: bills = [],
@@ -29,51 +25,6 @@ export default function Bills() {
     queryFn: () => listBills(user.uid),
     enabled: !!user?.uid,
   });
-
-  useEffect(() => {
-    const runReset = async () => {
-      if (!user?.uid || !bills.length) return;
-
-      const lastMonth = localStorage.getItem("budgetflow_last_month_reset");
-      const lastQuarter = localStorage.getItem("budgetflow_last_quarter_reset");
-
-      const { toReset, currentMonth, currentQuarter } = getFrequenciesToReset(
-        lastMonth,
-        lastQuarter,
-      );
-
-      if (!toReset.length) return;
-
-      const billsToReset = bills.filter(
-        (b) => b.is_paid && toReset.includes(b.frequency),
-      );
-
-      if (!billsToReset.length) {
-        if (toReset.includes("monthly")) {
-          localStorage.setItem("budgetflow_last_month_reset", currentMonth);
-        }
-        if (toReset.includes("quarterly")) {
-          localStorage.setItem("budgetflow_last_quarter_reset", currentQuarter);
-        }
-        return;
-      }
-
-      await Promise.all(
-        billsToReset.map((b) => updateBill(b.id, { is_paid: false })),
-      );
-
-      if (toReset.includes("monthly")) {
-        localStorage.setItem("budgetflow_last_month_reset", currentMonth);
-      }
-      if (toReset.includes("quarterly")) {
-        localStorage.setItem("budgetflow_last_quarter_reset", currentQuarter);
-      }
-
-      queryClientInstance.invalidateQueries({ queryKey: ["bills", user.uid] });
-    };
-
-    runReset();
-  }, [bills, user?.uid]);
 
   const createMutation = useMutation({
     mutationFn: (data) => createBill({ ...data, user_uid: user.uid }),
@@ -90,7 +41,7 @@ export default function Bills() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => deleteBill(id),
+    mutationFn: deleteBill,
     onSuccess: () => {
       queryClientInstance.invalidateQueries({ queryKey: ["bills", user.uid] });
     },
@@ -103,7 +54,6 @@ export default function Bills() {
       await createMutation.mutateAsync(data);
     }
     setEditingBill(null);
-    setDialogOpen(false);
   };
 
   const handleEdit = (bill) => {
@@ -111,34 +61,12 @@ export default function Bills() {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (bill) => {
-    await deleteMutation.mutateAsync(bill.id);
+  const handleDelete = async (billId) => {
+    await deleteMutation.mutateAsync(billId);
   };
 
-  const handleTogglePaid = async (bill) => {
-    const nowPaid = !bill.is_paid;
-    const today = new Date().toISOString().split("T")[0];
-    const now = new Date();
-
-    const updates = { is_paid: nowPaid };
-
-    if (nowPaid && bill.due_date && bill.frequency !== "one_time") {
-      updates.due_date = getNextDueDate(bill.due_date, bill.frequency);
-    }
-
-    await updateMutation.mutateAsync({ id: bill.id, data: updates });
-
-    if (nowPaid) {
-      await createPayment({
-        bill_id: bill.id,
-        bill_name: bill.name,
-        amount: bill.amount,
-        paid_date: today,
-        period_year: now.getFullYear(),
-        period_month: now.getMonth() + 1,
-        user_uid: user.uid,
-      });
-    }
+  const handleTogglePaid = (bill) => {
+    updateMutation.mutate({ id: bill.id, data: { is_paid: !bill.is_paid } });
   };
 
   if (isLoading) {
@@ -152,6 +80,10 @@ export default function Bills() {
     );
   }
 
+  // console.log("Bills user:", user);
+  // console.log("Bills isLoadingAuth:", isLoadingAuth);
+  // console.log("Bills isLoading:", isLoading);
+  // console.log("Bills bills:", bills);
   // console.log("Bills error:", error);
 
   return (
@@ -177,7 +109,13 @@ export default function Bills() {
 
       <OverdueBillAlert bills={bills} />
 
-      {bills.length === 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-48 rounded-xl" />
+          ))}
+        </div>
+      ) : bills.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-muted-foreground">
             No bills yet. Add your first bill to get started!
@@ -191,9 +129,8 @@ export default function Bills() {
                 key={bill.id}
                 bill={bill}
                 onEdit={handleEdit}
-                onDelete={handleDelete}
+                onDelete={(b) => handleDelete(b.id)}
                 onTogglePaid={handleTogglePaid}
-                onViewHistory={(b) => setHistoryBill(b)}
               />
             ))}
           </AnimatePresence>
@@ -202,24 +139,10 @@ export default function Bills() {
 
       <BillFormDialog
         open={dialogOpen}
-        onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) setEditingBill(null);
-        }}
+        onOpenChange={setDialogOpen}
         onSave={handleSave}
         editingBill={editingBill}
       />
-
-      {historyBill && (
-        <PaymentHistoryModal
-          bill={historyBill}
-          open={!!historyBill}
-          userUid={user?.uid}
-          onOpenChange={(v) => {
-            if (!v) setHistoryBill(null);
-          }}
-        />
-      )}
     </div>
   );
 }

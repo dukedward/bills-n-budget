@@ -6,12 +6,18 @@ import {
 } from "@/lib/budgetUtils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Check, RotateCcw } from "lucide-react";
+import { Pencil, Trash2, Check, RotateCcw, History } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { parseLocalDate } from "@/lib/utils";
 
-export default function BillCard({ bill, onEdit, onDelete, onTogglePaid }) {
+export default function BillCard({
+  bill,
+  onEdit,
+  onDelete,
+  onTogglePaid,
+  onViewHistory,
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -67,12 +73,12 @@ export default function BillCard({ bill, onEdit, onDelete, onTogglePaid }) {
           {bill.notes}
         </p>
       )}
-      <div className="flex gap-2 mt-4 pt-3 border-t border-border/50">
+      <div className="flex gap-1 mt-4 pt-3 border-t border-border/50">
         <Button
           size="sm"
           variant="ghost"
           onClick={() => onTogglePaid(bill)}
-          className="text-xs"
+          className="text-xs px-2"
         >
           {bill.is_paid ? (
             <RotateCcw className="w-3.5 h-3.5 mr-1" />
@@ -96,6 +102,14 @@ export default function BillCard({ bill, onEdit, onDelete, onTogglePaid }) {
           className="text-xs text-destructive hover:text-destructive"
         >
           <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onViewHistory(bill)}
+          className="text-xs"
+        >
+          <History className="w-3.5 h-3.5 mr-1" /> History
         </Button>
       </div>
     </motion.div>
